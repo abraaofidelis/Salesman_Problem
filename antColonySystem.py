@@ -7,27 +7,36 @@
 #===============================================================
 # Bibliotecas importadas
 import random
+import tkinter
+from math import sqrt
 #===============================================================
 # Parametros 
 alpha = 1
 beta = 1
-sigma = 0.25
+sigma = 0.15
 q = 10
+eta = 0.1   
 
+n_pontos = 5
 n_formigas = 5      #número de formigas
-n_iteracoes = 20    #número de iterações
+iteracoes = 200
+
+
+#n_iteracoes = 20    #número de iterações
 
 #Inicialização
-eta = 0.1                       #feromônio inicial
-matrizFeromonios = [[0.1]*5]*5           #matrix para atualização de feromonios depositados
-matrizDistancias =[[0, 50, 30, 22, 23],
-                   [50, 0, 22, 48, 29],
-                   [30, 22, 0, 34, 32],
-                   [22, 48, 34, 0, 35],
-                   [23, 29, 32, 35, 0]]
+                    #feromônio inicial
+#matrizFeromonios = [[eta]*5]*5           #matrix para atualização de feromonios depositados
+#matrizDistancias =[[0, 50, 30, 22, 23],
+#                   [50, 0, 22, 48, 29],
+#                   [30, 22, 0, 34, 32],
+#                   [22, 48, 34, 0, 35],
+#                   [23, 29, 32, 35, 0]]
 
-pocos = ["A", "B", "C", "D", "E"]  #poços que serão percorridos
-matrizProbabilidades = matrizProbabilidades = [[0]*(len(pocos))]*(len(pocos))       #matrix de probabilidades de caminhos
+matrizFeromonios = [[eta]*n_pontos]*n_pontos
+
+#pocos = ["A", "B", "C", "D", "E"]  #poços que serão percorridos
+#matrizProbabilidades = matrizProbabilidades = [[0]*(len(pontos))]*(len(pontos))       #matrix de probabilidades de caminhos
 #===============================================================
 
 #Função para usar o Método da Roleta
@@ -160,10 +169,10 @@ def atualizaFeromonio(rotas, matrizFeromonios, distanciasTotais, sigma, q):
 #===============================================================
 # atualiza Matriz Probabilidades
 def atualizaMatrizProbabilidades(matrizProbabilidades, matrizFeromonios):
-    for i in range(len(pocos)):
+    for i in range(len(pontos)):
         n=0
         temp = []
-        for j in range(len(pocos)):
+        for j in range(len(pontos)):
             if i != j:
                 tau = 1/matrizDistancias[i][j]
                 eta =  matrizFeromonios[i][j]
@@ -176,31 +185,86 @@ def atualizaMatrizProbabilidades(matrizProbabilidades, matrizFeromonios):
         matrizProbabilidades[i]=temp
     return matrizProbabilidades
 #===============================================================
-    
-
+def geraPontos(n_pontos):
+    pontos = []
+    i = 0
+    while i < n_pontos:
+        pontos.append(random.sample(range(500), 2))
+        i += 1          
+    return pontos
 #===============================================================
-# Main  
-matrizProbabilidades = iniMatrizes(pocos)
-ini_rota = posicionaFormigas(n_formigas, pocos)
+def geraMatrizDistancias(pontos):
+    matrizDistancias = []
+    i = 0
+    while i < len(pontos):
+        j = 0
+        temp = []
+        while j < len(pontos):
+            if j != i:
+                temp.append( sqrt((pontos[i][0]-pontos[j][0])**2 + (pontos[i][1]-pontos[j][1])**2))
+            else:
+                temp.append(0)
+            j += 1
+        matrizDistancias.append(temp)
+        i += 1
+    return matrizDistancias
+#===============================================================
+# Main 
+    
+pontos = geraPontos(n_pontos)
+matrizDistancias = geraMatrizDistancias(pontos)
+matrizProbabilidades = matrizProbabilidades = [[0]*(len(pontos))]*(len(pontos))
+ 
+matrizProbabilidades = iniMatrizes(pontos)
+ini_rota = posicionaFormigas(n_formigas, pontos)
 
-iteracoes = 200
 
 i = 0
 while i < iteracoes:
-    rotas = exploraRotas(ini_rota, pocos, matrizProbabilidades)
+    rotas = exploraRotas(ini_rota, pontos, matrizProbabilidades)
     distanciasTotais = distanciaRotas(rotas,matrizDistancias)
     matrizFeromonios = atualizaFeromonio(rotas, matrizFeromonios, distanciasTotais, sigma, q)
     matrizProbabilidades = atualizaMatrizProbabilidades(matrizProbabilidades, matrizFeromonios)
     i += 1
     
-i = 0
-while i < len(rotas):
-    temp = ""
-    for n in rotas[i]:
-        temp = temp + pocos[n]
-    temp = temp + temp[0]
-    rotas[i] = temp    
-    i += 1
-    
+#i = 0
+#showRotas = []
+#while i < len(rotas):
+#    temp = ""
+#    for n in rotas[i]:
+#        temp = temp + str(n)
+#    temp = temp + temp[0]
+#    showRotas.append(temp)    
+#    i += 1
+
 print(distanciasTotais)    
 print(rotas)
+
+#==============================================================================================
+# Tela TKINTER
+
+top = tkinter.Tk()
+top.title("Algoritmo Colonia de Formigas")
+
+C = tkinter.Canvas(top, height=500, width=800)
+
+i = 0
+while i < len(pontos):
+    C.create_rectangle(pontos[i][0] - 5, 500 - pontos[i][1] + 5, pontos[i][0] + 5, 500 - pontos[i][1] - 5,fill='red')
+    j = i+1
+    while j < len(pontos):
+        C.create_line(pontos[i][0],500 - pontos[i][1], pontos[j][0],500 - pontos[j][1] , fill='gray', width=1)
+        j +=1
+    i += 1
+
+#Traçar a Rota final no gráfico
+final = rotas[distanciasTotais.index(min(distanciasTotais))]
+C.create_line(pontos[final[0]][0],500 - pontos[final[0]][1], pontos[final[len(final)-1]][0],500 - pontos[final[len(final)-1]][1] , fill='blue', width=2)
+i = 0
+while i < len(final)-1:
+    C.create_line(pontos[final[i]][0],500 - pontos[final[i]][1], pontos[final[i+1]][0],500 - pontos[final[i+1]][1] , fill='blue', width=2)
+    i += 1
+
+
+C.pack()
+top.mainloop()
